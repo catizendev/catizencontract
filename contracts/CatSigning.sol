@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
@@ -95,7 +94,7 @@ contract CatSigning is ReentrancyGuardUpgradeable, OwnableUpgradeable {
         __Ownable_init();
     }
 
-    function taskSign(string memory comment) public payable {
+    function taskSign(string memory comment) public payable nonReentrant {
         dataTaskSign.push(CallData(block.number, msg.sender, comment));
         emit OnTaskSign(
             dataTaskSign.length.sub(1),
@@ -105,7 +104,7 @@ contract CatSigning is ReentrancyGuardUpgradeable, OwnableUpgradeable {
         );
     }
 
-    function gameSign(string memory comment) public payable {
+    function gameSign(string memory comment) public payable nonReentrant {
         dataGameSign.push(CallData(block.number, msg.sender, comment));
         emit OnGameSign(
             dataGameSign.length.sub(1),
@@ -115,7 +114,7 @@ contract CatSigning is ReentrancyGuardUpgradeable, OwnableUpgradeable {
         );
     }
 
-    function gameRecharge(string memory comment) external payable {
+    function gameRecharge(string memory comment) external payable nonReentrant {
         dataGameRecharge.push(
             CallDataWithPay(block.number, msg.sender, msg.value, comment)
         );
@@ -139,7 +138,7 @@ contract CatSigning is ReentrancyGuardUpgradeable, OwnableUpgradeable {
         uint256 tokenid,
         uint256 amount,
         string memory comment
-    ) external {
+    ) external nonReentrant {
         dataGameRechargeERC20.push(
             CallDataWithPayERC20(
                 block.number,
@@ -167,18 +166,6 @@ contract CatSigning is ReentrancyGuardUpgradeable, OwnableUpgradeable {
         );
     }
 
-    function batchSendETH(
-        uint256 amount,
-        address[] memory users,
-        string memory comment
-    ) external payable {
-        require(msg.value >= users.length.mul(amount), "!amount");
-        for (uint256 i = 0; i < users.length; i++) {
-            (bool sentok, ) = users[i].call{value: amount}(bytes(comment));
-            require(sentok, "Failed to send Ether");
-        }
-    }
-
     function addBatchSender(address token, uint256 valueid) external onlyOwner {
         batch_sender[token] = valueid;
     }
@@ -186,7 +173,7 @@ contract CatSigning is ReentrancyGuardUpgradeable, OwnableUpgradeable {
     function batchSendAny(
         uint256 batchid,
         SendData[] memory data
-    ) external payable {
+    ) external payable nonReentrant {
         require(batch_done[batchid] == 0, "!batch_done");
         require(batch_sender[msg.sender] > 0, "!sender");
 
@@ -222,27 +209,5 @@ contract CatSigning is ReentrancyGuardUpgradeable, OwnableUpgradeable {
             IERC20MetadataUpgradeable(token).safeTransfer(msg.sender, amount);
         }
         emit OnMasterWithdraw(msg.sender, token, amount);
-    }
-
-    fallback() external payable {
-        if (msg.data.length < 3) return;
-        if (msg.data[1] != 0x3a) return;
-
-        string memory comment = string(msg.data[2:]);
-        if (msg.data[0] == 0x61) {
-            this.taskSign(comment);
-        }
-        if (msg.data[0] == 0x62) {
-            this.gameSign(comment);
-        }
-        if (msg.data[0] == 0x63) {
-            require(msg.value > 0, "!c:value");
-            this.gameRecharge{value: msg.value}(comment);
-        }
-    }
-
-    receive() external payable {
-        // bytes memory converted = new bytes(2);
-        emit OnFallback(9998, block.timestamp, msg.sender, msg.value, "");
     }
 }
