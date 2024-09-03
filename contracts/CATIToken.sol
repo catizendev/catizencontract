@@ -4,7 +4,7 @@ pragma solidity ^0.8.16;
 import "@openzeppelin/contracts/access/AccessControlDefaultAdminRules.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 
-string constant NAME = "CATI";
+string constant NAME = "Catizen";
 string constant SYMBOL = "CATI";
 
 contract CATIToken is ERC20Votes, AccessControlDefaultAdminRules {
